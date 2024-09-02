@@ -1,4 +1,3 @@
-// SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.24;
 
 /// @title Simple voting mechanism - supports delegation.
@@ -36,15 +35,13 @@ contract Ballot {
         voters[chairPersion].weight = 1;
 
         for (uint i = 0; i < proposalNames.length; i++) {
-            proposals.push(Proposal({
-                name: proposalNames[i],
-                voteCount: 0
-            }))
+            proposals.push(Proposal({name: proposalNames[i], voteCount: 0}));
         }
     }
 
+    // Mtor: Grants voting rights to an entity.
     function giveRightToVote(address voter) external {
-        // Guards.
+        // Guard.
         require(
             msg.sender == chairPersion,
             "Only chair person can grant voting rights"
@@ -53,53 +50,60 @@ contract Ballot {
             voters[voter].voted == false,
             "Voter is attempting to vote twice"
         );
-        require(
-            voters[voter].weight == 0,
-            "Voter weight is not zero"
-        );
+        require(voters[voter].weight == 0, "Voter weight is not zero");
 
         // Set voter's vote permissions - i.e. weight.
         voters[voter].weight = 1;
     }
 
+    // Mtor: Delegates voting rights to a 3rd party entity.
     function delegate(address to) external {
-        // Guards.
-        require(
-            to != msg.msg.sender,
-            "Self-delegation is not allowed"
-        );
+        // Guard.
+        require(to != msg.sender, "Self-delegation is not allowed");
 
         Voter storage sender = voters[msg.sender];
-        require(
-            sender.weight != 0,
-            "Insufficient voting permissions"
-        );
-        require(
-            sender.voted == false,
-            "Duplicate vote"
-        );
+        require(sender.weight != 0, "Insufficient voting permissions");
+        require(sender.voted == false, "Duplicate vote");
 
         while (voters[to].delegate != address(0)) {
             to = voters[to].delegate;
-            require(
-                to != msg.sender,
-                "Found loop in delegation chain"
-            );
+            require(to != msg.sender, "Found loop in delegation chain");
         }
 
         Voter storage delegatee = voters[to];
-        require(
-            delegatee.weight >= 1,
-            "Delegatee cannot vote"
-        );
+        require(delegatee.weight >= 1, "Delegatee cannot vote");
 
-        // State mutations.
-        sender.delegate = delegatee;
+        // Mutate state.
+        sender.delegate = to;
         sender.voted = true;
         if (delegatee.voted == true) {
             proposals[delegatee.vote].voteCount += sender.weight;
         } else {
             delegatee.weight += sender.weight;
+        }
+    }
+
+    // Mtor: Exercises vote.
+    function vote(uint proposal) external {
+        // Guard.
+        Voter storage sender = voters[msg.sender];
+        require(sender.weight != 0, "Insufficient voting permissions");
+        require(sender.voted == false, "Duplicate voting");
+
+        // Mutate state.
+        sender.voted = true;
+        sender.vote = proposal;
+        proposals[proposal].voteCount += sender.weight;
+    }
+
+    // View: Returns wining proposal identifer.
+    function winningProposal() public view returns (uint winningProposal_) {
+        uint winningVoteCount = 0;
+        for (uint p = 0; p < proposals.length; p++) {
+            if (proposals[p].voteCount > winningVoteCount) {
+                winningVoteCount = proposals[p].voteCount;
+                winningProposal_ = p;
+            }
         }
     }
 }
