@@ -2,7 +2,7 @@ pragma solidity ^0.8.24;
 
 /// @title Simple voting mechanism - supports delegation.
 contract Ballot {
-    // Field: a voter.
+    // Storage: a voter.
     struct Voter {
         // Weight accumulated by delegation.
         uint weight;
@@ -14,19 +14,20 @@ contract Ballot {
         uint vote;
     }
 
-    // Field: a proposal that may result in a vote.
+    // Storage: a proposal that may result in a vote.
     struct Proposal {
+        bool isWinnerWhenTied;
         bytes32 name;
         uint voteCount;
     }
 
-    // Field: Entity responsible for voting coordination.
+    // Storage: Entity responsible for voting coordination.
     address public chairPersion;
 
-    // Field: Mapping of registered addresses to voters.
+    // Storage: Mapping of registered addresses to voters.
     mapping(address => Voter) public voters;
 
-    // Field: Array of submitted proposals.
+    // Storage: Array of submitted proposals.
     Proposal[] public proposals;
 
     // Ctor: accept a set of proposal names/identifiers.
@@ -35,11 +36,17 @@ contract Ballot {
         voters[chairPersion].weight = 1;
 
         for (uint i = 0; i < proposalNames.length; i++) {
-            proposals.push(Proposal({name: proposalNames[i], voteCount: 0}));
+            proposals.push(
+                Proposal({
+                    isWinnerWhenTied: false,
+                    name: proposalNames[i],
+                    voteCount: 0
+                })
+            );
         }
     }
 
-    // Mtor: Grants voting rights to an entity.
+    // Mtor: Grants voting rights to a voting entity.
     function giveRightToVote(address voter) external {
         // Guard.
         require(
@@ -54,6 +61,26 @@ contract Ballot {
 
         // Set voter's vote permissions - i.e. weight.
         voters[voter].weight = 1;
+    }
+
+    // Mtor: Grants voting rights to a set of voting entities.
+    function giveRightToVoteToSet(address[] memory voters_) external {
+        // Guard.
+        require(
+            msg.sender == chairPersion,
+            "Only chair person can grant voting rights"
+        );
+
+        // Set each voter's vote permissions - i.e. weight.
+        for (uint i = 0; i < voters_.length; i++) {
+            address voter = voters_[i];
+            require(
+                voters[voter].voted == false,
+                "Voter is attempting to vote twice"
+            );
+            require(voters[voter].weight == 0, "Voter weight is not zero");
+            voters[voter].weight = 1;
+        }
     }
 
     // Mtor: Delegates voting rights to a 3rd party entity.
@@ -94,10 +121,15 @@ contract Ballot {
         sender.voted = true;
         sender.vote = proposal;
         proposals[proposal].voteCount += sender.weight;
+        if (msg.sender == chairPersion) {
+            proposals[proposal].isWinnerWhenTied = true;
+        }
     }
 
     // View: Returns wining proposal identifer.
     function winningProposal() public view returns (uint winningProposal_) {
+        require(proposals.length > 0, "Invalid proposals");
+
         uint winningVoteCount = 0;
         for (uint p = 0; p < proposals.length; p++) {
             if (proposals[p].voteCount > winningVoteCount) {
@@ -105,5 +137,10 @@ contract Ballot {
                 winningProposal_ = p;
             }
         }
+    }
+
+    // View: Returns name of winning proposal.
+    function winnerName() external view returns (bytes32 winnerName_) {
+        winnerName_ = proposals[winningProposal()].name;
     }
 }
