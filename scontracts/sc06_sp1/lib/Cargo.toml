@@ -1,0 +1,8 @@
+[package]
+name = "sc06-lib"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+blake2 = "0.11.0-pre.3"
+ed25519-consensus = "2.1.0"

@@ -1,0 +1,12 @@
+[package]
+version = "0.1.0"
+name = "sc05-program"
+edition = "2021"
+
+[dependencies]
+alloy-sol-types = { workspace = true }
+sp1-zkvm = "1.2.0"
+sc05-lib = { path = "../lib" }
+
+[patch.crates-io]
+ed25519-consensus = { git = "https://github.com/sp1-patches/ed25519-consensus", branch = "patch-v2.1.0" }
