@@ -4,5 +4,5 @@ name = "sc06-program"
 edition = "2021"
 
 [dependencies]
-sp1-zkvm = "1.2.0"
 sc06-lib = { path = "../lib" }
+sp1-zkvm = "1.2.0"
