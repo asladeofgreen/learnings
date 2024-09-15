@@ -38,14 +38,6 @@ fn main() {
         std::process::exit(1);
     }
 
-    if args.execute {
-        do_execute(args);
-    } else {
-        do_prove(args);
-    }
-}
-
-fn do_execute(args: Args) {
     let mut stdin = SP1Stdin::new();
     stdin.write_vec(hex::decode(MSG_ED25519).unwrap());
     stdin.write_vec(hex::decode(SIG_ED25519).unwrap());
@@ -56,22 +48,27 @@ fn do_execute(args: Args) {
     stdin.write_vec(MSG_BLAKE2B.as_bytes().to_vec());
     stdin.write_vec(hex::decode(DIGEST_BLAKE2B).unwrap());
 
-    let client = ProverClient::new();
+    if args.execute {
+        do_execute(stdin);
+    } else {
+        do_prove(stdin);
+    }
+}
 
+fn do_execute(stdin: SP1Stdin) {
+    let client = ProverClient::new();
     let (output, report) = client.execute(_ELF, stdin).run().unwrap();
-    println!("Program executed successfully.");
 
     // Process output.
     // TODO
 
     // Process report.
     println!("Number of cycles: {}", report.total_instruction_count());
+    println!("Number of sys calls: {}", report.total_syscall_count());
 }
 
-fn do_prove(args: Args) {
-    let mut stdin = SP1Stdin::new();
+fn do_prove(stdin: SP1Stdin) {
     let client = ProverClient::new();
-
     let (pk, vk) = client.setup(_ELF);
 
     // Set proof.
